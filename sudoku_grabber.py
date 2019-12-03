@@ -1,56 +1,26 @@
-import cv2
-import numpy as np
-import torch
-from torchvision import transforms
 import logging
 
-from train_digit_classifier import Net
+import cv2
+import numpy as np
+import pandas as pd
+
+from digit_prediction import load_model, predict_digit
+from image_processing import find_largest_contour, blur_and_binarize, crop_contour
 
 logger = logging.getLogger(__name__)
 
-IMAGE_PATH = "data/sudoku1.jpg"
+IMAGE_PATH = "data/sudoku3.jpg"
+OUTPUT_PATH = "sudoku_table.csv"
+MODEL_PATH = "mnist_cnn.pt"
 SIZE_TOLERANCE = 0.5
 MIN_N_PIXELS = 10
-PROBABILITY_THRESHOLD = 0.9
+PROBABILITY_THRESHOLD = 0.99
+PLOT_RESULTS = True
 
-TRANSFORMS = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.1307,), (0.3081,))
-])
-
-model = Net()
-model.load_state_dict(torch.load("mnist_cnn.pt"))
-model.eval()
+model = load_model(MODEL_PATH)
 
 
-def find_largest_contour(contours):
-    max_area = 0
-    largest_contour = None
-    for contour in contours:
-        area = cv2.contourArea(contour)
-        if area > max_area:
-            max_area = area
-            largest_contour = contour
-    return largest_contour
-
-
-def blur_and_binarize(image):
-    blurred_image = cv2.GaussianBlur(image, (5, 5), 0)
-    binarized_image = cv2.adaptiveThreshold(blurred_image, 255, 1, 1, 11, 2)
-    return binarized_image
-
-
-def crop_contour(image, contour):
-    x, y, w, h = cv2.boundingRect(contour)
-    cropped_image = image[y:y + h, x:x + w]
-    return cropped_image
-
-
-def extract_sudoku_table(image_path, plot_results = True):
-    image = cv2.imread(image_path)
-    if plot_results:
-        cv2.imshow("Original image", image)
-
+def extract_sudoku_image(image):
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     binarized_image = blur_and_binarize(gray_image)
 
@@ -58,9 +28,13 @@ def extract_sudoku_table(image_path, plot_results = True):
     largest_contour = find_largest_contour(contours)
 
     sudoku_table_binarized = crop_contour(binarized_image, largest_contour)
-    if plot_results:
+    if PLOT_RESULTS:
         cv2.imshow("Sudoku table", sudoku_table_binarized)
 
+    return sudoku_table_binarized
+
+
+def extract_cells(sudoku_table_binarized):
     sudoku_table_binarized = cv2.resize(sudoku_table_binarized, (500, 500), interpolation=cv2.INTER_AREA)
     expected_cell_area = int(500 / 9) * int(500 / 9)
 
@@ -72,19 +46,15 @@ def extract_sudoku_table(image_path, plot_results = True):
         x, y, w, h = cv2.boundingRect(contour)
         area = w * h
         is_cell = (area < (1 + SIZE_TOLERANCE) * expected_cell_area) and (
-                    area > (1 - SIZE_TOLERANCE) * expected_cell_area)
+                area > (1 - SIZE_TOLERANCE) * expected_cell_area)
         if is_cell:
             cell = crop_contour(sudoku_table_binarized, contour)
-            cell = cv2.resize(cell, (28, 28), interpolation=cv2.INTER_AREA)
-            cell_center = cell[5:-5, 5:-5]
-            n_white_pixels = sum(sum(cell_center > 250))
+            cell = cv2.resize(cell, (34, 34), interpolation=cv2.INTER_AREA)
+            cell = cell[3:-3, 3:-3]
+            n_white_pixels = sum(sum(cell > 250))
 
             if n_white_pixels > MIN_N_PIXELS:
-                cell_tensor = TRANSFORMS(cell)
-                cell_tensor = cell_tensor.unsqueeze(0)
-                output = model(cell_tensor)
-                predicted_digit = output.argmax(dim=1)[0].item()
-                probability = round(torch.exp(output.max()).item(), 2)
+                predicted_digit, probability = predict_digit(cell, model)
             else:
                 predicted_digit = None
                 probability = 1
@@ -93,8 +63,12 @@ def extract_sudoku_table(image_path, plot_results = True):
             cells.append(dict(x=x, y=y, digit=predicted_digit, probability=probability))
 
     if cell_counter != 81:
-        logger.error(f"Sudoku game cannot be extracted from image. Number of cells found: {cell_counter}")
+        raise Exception(f"Sudoku game cannot be extracted from image. Number of cells found: {cell_counter}")
 
+    return cells
+
+
+def create_digit_table(cells):
     cells = sorted(cells, key=lambda k: k['y'])
     digit_table, probability_table = [], []
     for k in range(9):
@@ -108,18 +82,34 @@ def extract_sudoku_table(image_path, plot_results = True):
     digit_table = np.array(digit_table)
     probability_table = np.array(probability_table)
 
+    return digit_table, probability_table
+
+def replace_uncertain_digits_with_question_mark(digit_table, probability_table):
     uncertain_elements = probability_table < PROBABILITY_THRESHOLD
-    if uncertain_elements.any():
-        logger.warning("Extracted Sudoku table contains some uncertain elements that need to be filled manually.")
+    n_uncertain_digits = sum(sum(uncertain_elements))
+    if n_uncertain_digits > 0:
+        logger.warning(f"Extracted Sudoku table contains {n_uncertain_digits} uncertain digits")
     final_table = digit_table
     final_table[uncertain_elements] = "?"
-    print(final_table)
+    return final_table
 
-    if plot_results:
-        cv2.imshow("Sudoku table new", sudoku_table_binarized)
+
+def main(image_path):
+    image = cv2.imread(image_path)
+    if PLOT_RESULTS:
+        cv2.imshow("Original image", image)
+
+    sudoku_table_binarized = extract_sudoku_image(image)
+    cells = extract_cells(sudoku_table_binarized)
+    digit_table, probability_table = create_digit_table(cells)
+    final_table = replace_uncertain_digits_with_question_mark(digit_table, probability_table)
+    df_final_table = pd.DataFrame(final_table)
+    df_final_table.to_csv(OUTPUT_PATH, index=False, header=False)
+    print(df_final_table)
+
+    if PLOT_RESULTS:
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-
 if __name__ == '__main__':
-    extract_sudoku_table(IMAGE_PATH)
+    main(IMAGE_PATH)

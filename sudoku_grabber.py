@@ -47,7 +47,7 @@ def analyze_cell(cell, n_edge_pixels=3):
     return predicted_digit, probability
 
 
-def extract_cells(sudoku_table_binarized, erode_size=0):
+def extract_cells(sudoku_table_binarized, erode_size=-1):
     sudoku_table_binarized = cv2.resize(sudoku_table_binarized, (500, 500), interpolation=cv2.INTER_AREA)
     expected_cell_area = int(500 / 9) * int(500 / 9)
     contours, _ = cv2.findContours(sudoku_table_binarized, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
@@ -60,8 +60,9 @@ def extract_cells(sudoku_table_binarized, erode_size=0):
                 area > (1 - SIZE_TOLERANCE) * expected_cell_area)
         if is_cell:
             cell = crop_contour(sudoku_table_binarized, contour)
-            kernel = np.ones((erode_size, erode_size), np.uint8)
-            cell = cv2.erode(cell, kernel, iterations=1)
+            if erode_size > 0:
+                kernel = np.ones((erode_size, erode_size), np.uint8)
+                cell = cv2.erode(cell, kernel, iterations=1)
             predicted_digit, probability = analyze_cell(cell)
             cells.append(dict(x=x, y=y, digit=predicted_digit, probability=probability))
 

@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 
 
 def find_largest_contour(contours):
@@ -12,10 +13,14 @@ def find_largest_contour(contours):
     return largest_contour
 
 
-def blur_and_binarize(image):
-    blurred_image = cv2.GaussianBlur(image, (5, 5), 0)
-    binarized_image = cv2.adaptiveThreshold(blurred_image, 255, 1, 1, 11, 2)
-    return binarized_image
+def process_image(image, gaussian_size=5, dilate_size=3, erode_size=0):
+    image = cv2.GaussianBlur(image, (gaussian_size, gaussian_size), 0)
+    image = cv2.adaptiveThreshold(image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 1, 11, 2)
+    kernel = np.ones((dilate_size, dilate_size), np.uint8)
+    image = cv2.dilate(image, kernel, iterations=1)
+    kernel = np.ones((erode_size, erode_size), np.uint8)
+    image = cv2.erode(image, kernel, iterations=1)
+    return image
 
 
 def crop_contour(image, contour):

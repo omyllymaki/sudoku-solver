@@ -4,7 +4,7 @@ import pandas as pd
 
 import cv2
 
-from digit_prediction import load_model
+from digit_classifier import DigitClassifier
 from sudoku_grabber import SudokuGrabber
 
 logger = logging.getLogger(__name__)
@@ -18,13 +18,11 @@ PROBABILITY_THRESHOLD = 0.99
 PLOT_RESULTS = True
 DILATE_SIZES = range(8)
 
-model = load_model(MODEL_PATH)
-
 
 def main():
     image = cv2.imread(IMAGE_PATH)
-    model = load_model(MODEL_PATH)
-    grabber = SudokuGrabber(model, DILATE_SIZES, PROBABILITY_THRESHOLD, MIN_N_PIXELS, SIZE_TOLERANCE)
+    model = DigitClassifier(MODEL_PATH, min_n_white_pixels=MIN_N_PIXELS)
+    grabber = SudokuGrabber(model, DILATE_SIZES, PROBABILITY_THRESHOLD, SIZE_TOLERANCE)
     sudoku_table = grabber.convert(image)
 
     df_sudoku = pd.DataFrame(sudoku_table)

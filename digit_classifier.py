@@ -1,28 +1,36 @@
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
+from torchvision import transforms
+
+from constants import MNIST_DATASET_STDEV, MNIST_DATASET_MEAN
+from net import Net
 
 
-class DigitClassifier(nn.Module):
-    def __init__(self):
-        super(DigitClassifier, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, 3, 1)
-        self.conv2 = nn.Conv2d(32, 64, 3, 1)
-        self.dropout1 = nn.Dropout2d(0.5)
-        self.dropout2 = nn.Dropout2d(0.5)
-        self.fc1 = nn.Linear(9216, 128)
-        self.fc2 = nn.Linear(128, 10)
+class DigitClassifier:
+    TRANSFORMS = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((MNIST_DATASET_MEAN,), (MNIST_DATASET_STDEV,))
+    ])
 
-    def forward(self, x):
-        x = self.conv1(x)
-        x = F.relu(x)
-        x = self.conv2(x)
-        x = F.max_pool2d(x, 2)
-        x = self.dropout1(x)
-        x = torch.flatten(x, 1)
-        x = self.fc1(x)
-        x = F.relu(x)
-        x = self.dropout2(x)
-        x = self.fc2(x)
-        output = F.log_softmax(x, dim=1)
-        return output
+    def __init__(self, path, min_n_white_pixels=10, threshold=250):
+        self.model = Net()
+        self.model.load_state_dict(torch.load(path))
+        self.model.eval()
+        self.min_n_white_pixels = min_n_white_pixels
+        self.threshold = threshold
+
+    def predict(self, image):
+        n_white_pixels = sum(sum(image > self.threshold))
+        if n_white_pixels > self.min_n_white_pixels:
+            predicted_digit, probability = self._predict_digit(image)
+        else:
+            predicted_digit = None
+            probability = 1
+        return predicted_digit, probability
+
+    def _predict_digit(self, image):
+        tensor = self.TRANSFORMS(image)
+        tensor = tensor.unsqueeze(0)
+        output = self.model(tensor)
+        predicted_digit = output.argmax(dim=1)[0].item()
+        probability = torch.exp(output.max()).item()
+        return predicted_digit, probability

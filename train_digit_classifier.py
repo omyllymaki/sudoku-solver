@@ -8,7 +8,8 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
 from torchvision import datasets, transforms
 
-from digit_classifier import DigitClassifier
+from net import Net
+from constants import MNIST_DATASET_MEAN, MNIST_DATASET_STDEV
 
 
 def train(args, model, device, train_loader, optimizer, epoch):
@@ -85,11 +86,11 @@ def main():
     test_loader = torch.utils.data.DataLoader(
         datasets.MNIST('../data', train=False, transform=transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize((0.1307,), (0.3081,))
+            transforms.Normalize((MNIST_DATASET_MEAN,), (MNIST_DATASET_STDEV,))
         ])),
         batch_size=args.test_batch_size, shuffle=True, **kwargs)
 
-    model = DigitClassifier().to(device)
+    model = Net().to(device)
     optimizer = optim.Adadelta(model.parameters(), lr=args.lr)
 
     scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
@@ -99,7 +100,7 @@ def main():
         scheduler.step()
 
     if args.save_model:
-        torch.save(model.state_dict(), "mnist_cnn2.pt")
+        torch.save(model.state_dict(), "mnist_cnn.pt")
 
 
 if __name__ == '__main__':

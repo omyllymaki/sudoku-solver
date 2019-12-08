@@ -3,7 +3,6 @@ import logging
 import cv2
 import numpy as np
 
-from digit_prediction import predict_digit
 from image_processing import find_largest_contour, crop_contour, dilate, get_contour_coordinates, \
     show_images, binarize_adaptive
 
@@ -15,12 +14,10 @@ class SudokuGrabber:
     def __init__(self, digit_classifier,
                  dilate_sizes,
                  digit_probability_threshold,
-                 min_n_white_pixels,
                  cell_size_tolerance):
         self.digit_classifier = digit_classifier
         self.dilate_sizes = dilate_sizes
         self.digit_probability_threshold = digit_probability_threshold
-        self.min_n_white_pixels = min_n_white_pixels
         self.cell_size_tolerance = cell_size_tolerance
 
     def convert(self, image):
@@ -48,16 +45,6 @@ class SudokuGrabber:
         show_images()
 
         return sudoku_table
-
-    def _analyze_cell_image(self, cell_image):
-        n_white_pixels = sum(sum(cell_image > 250))
-        if n_white_pixels > self.min_n_white_pixels:
-            predicted_digit, probability = predict_digit(cell_image, self.digit_classifier)
-        else:
-            predicted_digit = None
-            probability = 1
-        probability = round(probability, 2)
-        return predicted_digit, probability
 
     def _get_cell_contours(self, image):
         height, width = image.shape
@@ -100,7 +87,7 @@ class SudokuGrabber:
             x, y, _, _ = get_contour_coordinates(cell_contour)
             cell_image = crop_contour(image, cell_contour)
             cell_image = self._process_cell_image_for_analysis(cell_image)
-            digit, probability = self._analyze_cell_image(cell_image)
+            digit, probability = self.digit_classifier.predict(cell_image)
             cell_data.append(dict(x=x, y=y, digit=digit, probability=probability))
             cell_image = cv2.resize(cell_image, (218, 218), interpolation=cv2.INTER_LINEAR)
             cv2.imshow(f"{digit} {probability}", cell_image)

@@ -3,8 +3,11 @@ import time
 
 import numpy as np
 import pandas as pd
+import logging
 
 from sudoku_solver import SudokuSolver
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 def validate_table(table):

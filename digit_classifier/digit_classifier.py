@@ -2,7 +2,7 @@ import torch
 from torchvision import transforms
 
 from constants import MNIST_DATASET_STDEV, MNIST_DATASET_MEAN
-from net import Net
+from digit_classifier.net import Net
 
 
 class DigitClassifier:

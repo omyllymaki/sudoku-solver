@@ -3,7 +3,7 @@ import logging
 import cv2
 import numpy as np
 
-from image_processing import find_largest_contour, crop_contour, dilate, get_contour_coordinates, \
+from sudoku_grabber.image_processing import find_largest_contour, crop_contour, dilate, get_contour_coordinates, \
     show_images, binarize_adaptive
 
 logger = logging.getLogger(__name__)

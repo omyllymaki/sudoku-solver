@@ -4,8 +4,8 @@ import pandas as pd
 
 import cv2
 
-from digit_classifier import DigitClassifier
-from sudoku_grabber import SudokuGrabber
+from digit_classifier.digit_classifier import DigitClassifier
+from sudoku_grabber.sudoku_grabber import SudokuGrabber
 
 logger = logging.getLogger(__name__)
 

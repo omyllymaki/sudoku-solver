@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import logging
 
-from sudoku_solver import SudokuSolver
+from sudoku_solver.sudoku_solver import SudokuSolver
 
 logging.basicConfig(level=logging.DEBUG)
 

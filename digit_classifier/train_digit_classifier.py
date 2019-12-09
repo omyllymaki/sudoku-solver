@@ -8,7 +8,7 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
 from torchvision import datasets, transforms
 
-from net import Net
+from digit_classifier.net import Net
 from constants import MNIST_DATASET_MEAN, MNIST_DATASET_STDEV
 
 

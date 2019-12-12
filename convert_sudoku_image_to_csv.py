@@ -22,7 +22,7 @@ DILATE_SIZES = range(8)
 def main():
     image = cv2.imread(IMAGE_PATH)
     model = DigitClassifier(MODEL_PATH, min_n_white_pixels=MIN_N_PIXELS)
-    grabber = SudokuGrabber(model, DILATE_SIZES, PROBABILITY_THRESHOLD, SIZE_TOLERANCE)
+    grabber = SudokuGrabber(model, DILATE_SIZES, PROBABILITY_THRESHOLD, SIZE_TOLERANCE, True, True)
     sudoku_table = grabber.convert(image)
 
     df_sudoku = pd.DataFrame(sudoku_table)

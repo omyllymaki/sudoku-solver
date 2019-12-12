@@ -1,4 +1,5 @@
 import logging
+import os
 
 import cv2
 import numpy as np
@@ -14,26 +15,36 @@ class SudokuGrabber:
     def __init__(self, digit_classifier,
                  dilate_sizes,
                  digit_probability_threshold,
-                 cell_size_tolerance):
+                 cell_size_tolerance,
+                 plot_figures=False,
+                 save_figures=False,
+                 figures_path="images"):
         self.digit_classifier = digit_classifier
         self.dilate_sizes = dilate_sizes
         self.digit_probability_threshold = digit_probability_threshold
         self.cell_size_tolerance = cell_size_tolerance
+        self.plot_figures = plot_figures
+        self.save_figures = save_figures
+        self.figures_path = figures_path
+
+        if self.save_figures:
+            if not os.path.exists(self.figures_path):
+                os.makedirs(self.figures_path)
 
     def convert(self, image):
-        cv2.imshow("Original image", image)
+        self.show_and_save_image("Original image", image)
 
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         gray_image = gray_image
         binary_image = ~binarize_adaptive(gray_image, 11, 15)
-        cv2.imshow("Binary image", binary_image)
+        self.show_and_save_image("Binary image", binary_image)
 
         binary_image_dilated = dilate(binary_image, (1, 1))
-        cv2.imshow("Binary image dilated", binary_image_dilated)
+        self.show_and_save_image("Binary image dilated", binary_image_dilated)
 
         sudoku_contour = self._get_sudoku_image_contour(binary_image_dilated)
         sudoku_image = crop_contour(binary_image, sudoku_contour)
-        cv2.imshow("Sudoku", sudoku_image)
+        self.show_and_save_image("Sudoku", sudoku_image)
 
         cell_contours = self._get_sudoku_cell_contours(sudoku_image)
 
@@ -45,6 +56,13 @@ class SudokuGrabber:
         show_images()
 
         return sudoku_table
+
+    def show_and_save_image(self, title, image):
+        if self.plot_figures:
+            cv2.imshow(title, image)
+        if self.save_figures:
+            file_path = os.path.join(self.figures_path, title + ".jpg")
+            cv2.imwrite(file_path, image)
 
     def _get_cell_contours(self, image):
         height, width = image.shape
@@ -83,14 +101,14 @@ class SudokuGrabber:
 
     def _analyze_cell_contours(self, cell_contours, image):
         cell_data = []
-        for cell_contour in cell_contours:
+        for i, cell_contour in enumerate(cell_contours, 1):
             x, y, _, _ = get_contour_coordinates(cell_contour)
             cell_image = crop_contour(image, cell_contour)
             cell_image = self._process_cell_image_for_analysis(cell_image)
             digit, probability = self.digit_classifier.predict(cell_image)
             cell_data.append(dict(x=x, y=y, digit=digit, probability=probability))
             cell_image = cv2.resize(cell_image, (218, 218), interpolation=cv2.INTER_LINEAR)
-            cv2.imshow(f"{digit} {probability}", cell_image)
+            self.show_and_save_image(f"cell{i}, {digit} ({probability:.2f})", cell_image)
         return cell_data
 
     @staticmethod

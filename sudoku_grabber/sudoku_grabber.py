@@ -36,6 +36,7 @@ class SudokuGrabber:
 
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         gray_image = gray_image
+        self.show_and_save_image("Gray image", gray_image)
         binary_image = ~binarize_adaptive(gray_image, 11, 15)
         self.show_and_save_image("Binary image", binary_image)
 
@@ -43,12 +44,14 @@ class SudokuGrabber:
         self.show_and_save_image("Binary image dilated", binary_image_dilated)
 
         sudoku_contour = self._get_sudoku_image_contour(binary_image_dilated)
-        sudoku_image = crop_contour(binary_image, sudoku_contour)
+        sudoku_image_binarized = crop_contour(binary_image, sudoku_contour)
+        sudoku_image = crop_contour(~gray_image, sudoku_contour)
         self.show_and_save_image("Sudoku", sudoku_image)
+        self.show_and_save_image("Sudoku binarized", sudoku_image_binarized)
 
-        cell_contours = self._get_sudoku_cell_contours(sudoku_image)
+        cell_contours = self._get_sudoku_cell_contours(sudoku_image_binarized)
 
-        cell_data = self._analyze_cell_contours(cell_contours, sudoku_image)
+        cell_data = self._analyze_cell_contours(cell_contours, sudoku_image_binarized)
         digit_table, probability_table = self._create_digit_table(cell_data)
         sudoku_table = self._replace_uncertain_digits_with_question_mark(digit_table, probability_table)
 
@@ -107,8 +110,9 @@ class SudokuGrabber:
             cell_image = self._process_cell_image_for_analysis(cell_image)
             digit, probability = self.digit_classifier.predict(cell_image)
             cell_data.append(dict(x=x, y=y, digit=digit, probability=probability))
-            cell_image = cv2.resize(cell_image, (218, 218), interpolation=cv2.INTER_LINEAR)
-            self.show_and_save_image(f"cell{i}, {digit} ({probability:.2f})", cell_image)
+            cell_image = cv2.resize(cell_image, (416, 416), interpolation=cv2.INTER_LINEAR)
+            if digit:
+                self.show_and_save_image(f"cell{i}, {digit} ({probability:.2f})", cell_image)
         return cell_data
 
     @staticmethod

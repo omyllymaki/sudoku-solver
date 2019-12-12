@@ -51,7 +51,7 @@ class SudokuGrabber:
 
         cell_contours = self._get_sudoku_cell_contours(sudoku_image_binarized)
 
-        cell_data = self._analyze_cell_contours(cell_contours, sudoku_image_binarized)
+        cell_data = self._analyze_cell_contours(cell_contours, sudoku_image)
         digit_table, probability_table = self._create_digit_table(cell_data)
         sudoku_table = self._replace_uncertain_digits_with_question_mark(digit_table, probability_table)
 
@@ -110,7 +110,6 @@ class SudokuGrabber:
             cell_image = self._process_cell_image_for_analysis(cell_image)
             digit, probability = self.digit_classifier.predict(cell_image)
             cell_data.append(dict(x=x, y=y, digit=digit, probability=probability))
-            cell_image = cv2.resize(cell_image, (416, 416), interpolation=cv2.INTER_LINEAR)
             if digit:
                 self.show_and_save_image(f"cell{i}, {digit} ({probability:.2f})", cell_image)
         return cell_data

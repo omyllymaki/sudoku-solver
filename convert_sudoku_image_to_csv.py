@@ -9,19 +9,20 @@ from sudoku_grabber.sudoku_grabber import SudokuGrabber
 
 logger = logging.getLogger(__name__)
 
-IMAGE_PATH = os.path.join("data", "sudoku_images", "sudoku1.jpg")
+IMAGE_PATH = os.path.join("data", "sudoku_images", "sudoku7.jpg")
 OUTPUT_PATH = "sudoku_table.csv"
 MODEL_PATH = os.path.join("models", "mnist_cnn.pt")
 SIZE_TOLERANCE = 0.5
-MIN_N_PIXELS = 5
-PROBABILITY_THRESHOLD = 0.99
+MIN_N_PIXELS = 15
+INTENSITY_THRESHOLD = 50
+PROBABILITY_THRESHOLD = 0.5
 PLOT_RESULTS = True
 DILATE_SIZES = range(8)
 
 
 def main():
     image = cv2.imread(IMAGE_PATH)
-    model = DigitClassifier(MODEL_PATH, min_n_white_pixels=MIN_N_PIXELS)
+    model = DigitClassifier(MODEL_PATH, min_n_white_pixels=MIN_N_PIXELS, threshold=INTENSITY_THRESHOLD)
     grabber = SudokuGrabber(model, DILATE_SIZES, PROBABILITY_THRESHOLD, SIZE_TOLERANCE, True, True)
     sudoku_table = grabber.convert(image)
 

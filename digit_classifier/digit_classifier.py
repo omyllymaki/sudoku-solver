@@ -11,7 +11,7 @@ class DigitClassifier:
         transforms.Normalize((MNIST_DATASET_MEAN,), (MNIST_DATASET_STDEV,))
     ])
 
-    def __init__(self, path, min_n_white_pixels=10, threshold=250):
+    def __init__(self, path, min_n_white_pixels=10, threshold=10):
         self.model = Net()
         self.model.load_state_dict(torch.load(path))
         self.model.eval()

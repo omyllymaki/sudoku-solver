@@ -88,7 +88,7 @@ class SudokuGrabber:
         n_uncertain_digits = sum(sum(uncertain_elements))
         if n_uncertain_digits > 0:
             logger.warning(f"Extracted Sudoku table contains {n_uncertain_digits} uncertain digits")
-        final_table = digit_table
+        final_table = digit_table.astype(str)
         final_table[uncertain_elements] = "?"
         return final_table
 

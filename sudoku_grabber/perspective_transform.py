@@ -1,3 +1,5 @@
+from typing import List, Tuple
+
 import cv2
 import numpy as np
 from numpy.linalg import pinv
@@ -24,6 +26,24 @@ def calculate_max_dimensions(corners):
 
 
 def calculate_transformation_matrix(corners, target_corners):
+    """
+    Calculate transformation coefficients for homographic transformation.
+
+    See
+    http://www.corrmap.com/features/homography_transformation.php
+    https://wp.optics.arizona.edu/visualopticslab/wp-content/uploads/sites/52/2016/08/Lectures6_7.pdf
+
+    Returns vector of transformation coefficients:
+    a = fixed scale factor in X direction with scale Y unchanged.
+    b = scale factor in X direction proportional to Y distance from origin.
+    c = origin translation in X direction.
+    d = scale factor in Y direction proportional to X distance from origin.
+    e = fixed scale factor in Y direction with scale X unchanged.
+    f = origin translation in Y direction.
+    g = proportional scale factors X and Y in function of X.
+    h = proportional scale factors X and Y in function of Y.
+
+    """
     x = np.array([p[0] for p in corners])
     y = np.array([p[1] for p in corners])
     xp = np.array([p[0] for p in target_corners])
@@ -45,9 +65,17 @@ def calculate_transformation_matrix(corners, target_corners):
     return m
 
 
-def transform(m, points):
-    m = np.vstack((m, np.ones((1, 1))))
-    m = m.reshape((3, 3))
+def transform(transformation_matrix, points):
+    """
+    Does homographic transformation to points using given transformation matrix.
+
+    See
+    http://www.corrmap.com/features/homography_transformation.php
+    https://wp.optics.arizona.edu/visualopticslab/wp-content/uploads/sites/52/2016/08/Lectures6_7.pdf
+
+    """
+    transformation_matrix = np.vstack((transformation_matrix, np.ones((1, 1))))
+    transformation_matrix = transformation_matrix.reshape((3, 3))
 
     x = np.array([p[0] for p in points]).reshape(1, -1)
     y = np.array([p[1] for p in points]).reshape(1, -1)
@@ -57,7 +85,7 @@ def transform(m, points):
     v = np.vstack((v, y))
     v = np.vstack((v, np.ones((1, x.shape[1]))))
 
-    r = (m @ v) / (m[-1, :] @ v)
+    r = (transformation_matrix @ v) / (transformation_matrix[-1, :] @ v)
 
     result = []
     for row in r.T:
@@ -82,7 +110,15 @@ def update_map(map_x, map_y, m):
             counter += 1
 
 
-def crop_and_warp(input_image, corner_points):
+def crop_and_warp(input_image, corner_points: List[Tuple[int, int]]):
+    """
+    Crops and warps a rectangular section, defined by corner points, from an image into a square of similar size.
+
+    :param input_image: Gray image.
+    :param corner_points: Corner points should be given as list of tuples: [(x1,y1), ...] in order
+    top-left, top-right, bottom-right, bottom-left.
+    :return: Warped and cropped gray image.
+    """
     image = input_image.copy()
 
     w, h = calculate_max_dimensions(corner_points)
@@ -92,6 +128,9 @@ def crop_and_warp(input_image, corner_points):
         (w, h),
         (0, h)
     ]
+
+    # Note: corner_points and target_corners given in reverse order
+    # This is because update_map (cv2.remap) wants to have transform in this direction
     transformation_matrix = calculate_transformation_matrix(target_corners, corner_points)
 
     map_x = np.zeros_like(image, dtype=np.float32)

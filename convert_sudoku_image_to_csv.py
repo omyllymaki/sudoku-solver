@@ -9,7 +9,7 @@ from sudoku_grabber.sudoku_grabber import SudokuGrabber
 
 logger = logging.getLogger(__name__)
 
-IMAGE_PATH = os.path.join("data", "sudoku_images", "sudoku7.jpg")
+IMAGE_PATH = os.path.join("data", "sudoku_images", "sudoku4.jpg")
 OUTPUT_PATH = "sudoku_table.csv"
 MODEL_PATH = os.path.join("models", "mnist_cnn.pt")
 SIZE_TOLERANCE = 0.5

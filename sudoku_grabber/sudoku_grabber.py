@@ -6,6 +6,7 @@ import numpy as np
 
 from sudoku_grabber.image_processing import find_largest_contour, crop_contour, dilate, get_contour_coordinates, \
     binarize_adaptive, find_contour_corners
+from sudoku_grabber.perspective_transform import crop_and_warp
 from sudoku_grabber.visualization import add_points, show_images
 
 logger = logging.getLogger(__name__)
@@ -50,8 +51,8 @@ class SudokuGrabber:
         image_with_corners_detected = add_points(gray_image, sudoku_corners)
         self._show_and_save_image("Corner detection", image_with_corners_detected)
 
-        sudoku_image = self._crop_and_warp(~gray_image, sudoku_corners)
-        sudoku_image_binarized = self._crop_and_warp(binary_image, sudoku_corners)
+        sudoku_image = crop_and_warp(~gray_image, sudoku_corners)
+        sudoku_image_binarized = crop_and_warp(binary_image, sudoku_corners)
         self._show_and_save_image("Sudoku", sudoku_image)
         self._show_and_save_image("Sudoku binarized", sudoku_image_binarized)
 
@@ -149,38 +150,3 @@ class SudokuGrabber:
         probability_table = np.array(probability_table)
 
         return digit_table, probability_table
-
-    @staticmethod
-    def _calculate_distance(p1, p2):
-        a = p2[0] - p1[0]
-        b = p2[1] - p1[1]
-        return np.sqrt((a ** 2) + (b ** 2))
-
-    def _calculate_max_dimensions(self, corners):
-        tl, tr, br, bl = corners[0], corners[1], corners[2], corners[3]
-
-        width1 = self._calculate_distance(br, bl)
-        width2 = self._calculate_distance(tr, tl)
-        max_width = max(int(width1), int(width2))
-
-        height1 = self._calculate_distance(tr, br)
-        height2 = self._calculate_distance(tl, bl)
-        max_heigth = max(int(height1), int(height2))
-
-        return max_width, max_heigth
-
-    def _crop_and_warp(self, image, corners):
-        """Crops and warps a rectangular section from an image into a square of similar size."""
-
-        width, height = self._calculate_max_dimensions(corners)
-
-        target_corners = np.array([
-            [0, 0],
-            [width - 1, 0],
-            [width - 1, height - 1],
-            [0, height - 1]
-        ], dtype="float32")
-
-        transformation_matrix = cv2.getPerspectiveTransform(corners, target_corners)
-
-        return cv2.warpPerspective(image, transformation_matrix, (int(width), int(height)))
